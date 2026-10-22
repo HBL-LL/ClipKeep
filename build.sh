@@ -14,6 +14,8 @@ rm -rf "$app" build/ClipKeep.zip
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin_path/ClipKeep" "$app/Contents/MacOS/ClipKeep"
 cp Resources/Info.plist "$app/Contents/Info.plist"
+# App icon (Dock, Finder) and the menu bar template icon.
+cp Resources/AppIcon.icns Resources/menubarTemplate.png Resources/menubarTemplate@2x.png "$app/Contents/Resources/"
 
 # Ad-hoc signature so macOS can track its permissions (Accessibility, login item).
 codesign --force --sign - "$app"
