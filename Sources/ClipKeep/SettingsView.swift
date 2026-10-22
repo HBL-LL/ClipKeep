@@ -29,6 +29,7 @@ final class SettingsWindowModel: ObservableObject {
 struct SettingsView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var window: SettingsWindowModel
+    @ObservedObject var updater: Updater
 
     var body: some View {
         Form {
@@ -91,6 +92,24 @@ struct SettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section("Updates") {
+                LabeledContent("Version", value: updater.currentVersion)
+                Toggle("Check for updates automatically", isOn: $settings.autoCheckUpdates)
+                HStack {
+                    Text(updater.statusText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if updater.isBusy {
+                        ProgressView().controlSize(.small)
+                    }
+                    Button("Check for Updates") {
+                        Task { await updater.check(announceResult: false) }
+                    }
+                    .disabled(updater.isBusy)
+                }
+            }
+
             Section {
                 HStack {
                     Text("Right-click the menu bar icon to pause recording or clear history.")
@@ -102,7 +121,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: 620)
+        .frame(width: 460, height: 700)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             window.hasAccessibility = Paster.hasAccessibility
         }

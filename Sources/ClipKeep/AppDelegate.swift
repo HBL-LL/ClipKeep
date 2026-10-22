@@ -38,6 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self?.statusItem.button?.highlight(visible)
         }
 
+        Updater.shared.startAutomaticChecks(settings: settings)
+
         settings.$historyLimit
             .dropFirst()
             .sink { [weak self] limit in self?.store.trim(to: limit) }
@@ -98,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         recordingItem.target = self
         menu.addItem(withTitle: "Clear History…", action: #selector(clearHistory), keyEquivalent: "").target = self
         menu.addItem(.separator())
+        menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "").target = self
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Quit ClipKeep", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusMenu = menu
@@ -132,6 +135,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         DispatchQueue.main.async { self.panel.show() }
     }
 
+    @objc private func checkForUpdates() {
+        Task { await Updater.shared.check(announceResult: true) }
+    }
+
     @objc private func toggleRecording() {
         settings.recording.toggle()
     }
@@ -151,7 +158,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc func openSettings() {
         if settingsWindow == nil {
-            let view = SettingsView(settings: settings, window: SettingsWindowModel())
+            let view = SettingsView(settings: settings, window: SettingsWindowModel(), updater: Updater.shared)
             let window = NSWindow(contentViewController: NSHostingController(rootView: view))
             window.title = "ClipKeep Settings"
             window.styleMask = [.titled, .closable]

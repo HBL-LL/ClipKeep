@@ -2,6 +2,20 @@
 
 A small menu bar clipboard manager for macOS 14+.
 
+## Install
+
+1. Download `ClipKeep.zip` from the [latest release](https://github.com/Hamza-Boulila/ClipKeep/releases/latest) and unzip it.
+2. Move `ClipKeep.app` to your Applications folder.
+3. The first time, right-click it and choose **Open**. ClipKeep isn't notarized by Apple, so macOS asks once. If it still won't open, go to System Settings → Privacy & Security and click **Open Anyway**.
+
+Works on Apple Silicon and Intel Macs running macOS 14 or later.
+
+## Updates
+
+ClipKeep checks GitHub for a new release once a day (Settings → Updates; you can turn this off). You can also click **Check for Updates** there, or right-click the menu bar icon. When a new version is out, ClipKeep shows what changed and can download, check, and install it, then relaunch.
+
+ClipKeep has to be somewhere it can replace itself, such as your Applications folder. After an update, macOS may ask you to allow Accessibility access again.
+
 ## Use it
 
 - **Click the menu bar icon** to open your clipboard history under it, or press **⇧⌘V** to open it near the mouse.
@@ -23,6 +37,7 @@ To paste for you, ClipKeep needs **Accessibility** access (System Settings → P
 | Popup window | `PanelController.swift`, `ClipListView.swift` | A floating panel that takes typing without stealing focus from the app you're in, so the paste lands there. |
 | Paste | `Paster.swift` | Writes the clip to the clipboard and sends ⌘V. |
 | Hotkey | `HotKey.swift` | System-wide ⇧⌘V via Carbon's `RegisterEventHotKey`. |
+| Updates | `UpdateCore.swift`, `Updater.swift` | Reads the latest GitHub release, downloads `ClipKeep.zip`, checks its SHA-256, bundle ID, version and code signature, swaps the app in place (rolling back on failure) and relaunches. |
 
 ## Build
 
@@ -33,7 +48,21 @@ Needs only Apple's Command Line Tools (no Xcode):
 open build/ClipKeep.app
 ```
 
+This makes `build/ClipKeep.app` and `build/ClipKeep.zip` (Apple Silicon + Intel).
+
 The app is signed ad hoc, so macOS treats every rebuild as a new app: after rebuilding, turn ClipKeep's Accessibility permission off and on again.
+
+### Publishing a release
+
+1. Raise `CFBundleShortVersionString` (and `CFBundleVersion`) in `Resources/Info.plist`, and commit.
+2. Run `./build.sh`.
+3. Create the release with the zip attached; the tag must match the version:
+
+```bash
+gh release create v1.2.0 build/ClipKeep.zip --title "ClipKeep 1.2.0" --notes "What changed"
+```
+
+The in-app updater looks for an asset named exactly `ClipKeep.zip` and checks that the app inside has the release's version.
 
 ## License
 
