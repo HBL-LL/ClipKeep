@@ -1,0 +1,36 @@
+INSTALLING CLIPKEEP
+
+1. Drag ClipKeep onto the Applications folder in this window.
+2. Open ClipKeep from your Applications folder.
+
+
+IF MACOS SAYS IT "COULD NOT VERIFY" CLIPKEEP
+
+ClipKeep is free and isn't signed with a paid Apple Developer ID, so macOS
+warns about it the first time. You only have to allow it once:
+
+1. In the warning, click "Done" (not "Move to Trash").
+2. Open System Settings > Privacy & Security.
+3. Scroll down to the Security section. Next to the message about ClipKeep,
+   click "Open Anyway", then enter your password.
+4. Open ClipKeep again and click "Open Anyway" in the last prompt.
+
+ClipKeep opens normally from then on.
+
+
+OR SKIP THE WARNING: INSTALL FROM TERMINAL
+
+Open Terminal (Applications > Utilities) and paste this line:
+
+  curl -fsSL https://raw.githubusercontent.com/Hamza-Boulila/ClipKeep/main/install.sh | bash
+
+It downloads the latest ClipKeep, checks it, puts it in Applications and
+opens it.
+
+
+AFTER IT OPENS
+
+ClipKeep lives in the menu bar (top right of the screen); it has no Dock icon.
+Click its icon or press Shift-Command-V to see your clipboard history.
+To let it paste for you, allow it in System Settings > Privacy & Security >
+Accessibility.
