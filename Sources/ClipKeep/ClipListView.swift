@@ -7,6 +7,7 @@ struct ClipListView: View {
     let onPaste: (Clip) -> Void
     let onTogglePin: (Clip) -> Void
     let onDelete: (Clip) -> Void
+    let onOpenSettings: () -> Void
 
     @FocusState private var searchFocused: Bool
 
@@ -21,6 +22,15 @@ struct ClipListView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 15))
                     .focused($searchFocused)
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless)
+                .help("Settings")
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)

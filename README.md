@@ -4,11 +4,12 @@ A small menu bar clipboard manager for macOS 14+.
 
 ## Use it
 
-- **⇧⌘V** opens your clipboard history near the mouse. You can also use the menu bar icon, or open the app again.
+- **Click the menu bar icon** to open your clipboard history under it, or press **⇧⌘V** to open it near the mouse.
+- **Right-click the icon** for Pause Recording, Clear History and Quit. The **gear** in the history window opens Settings.
 - Type to search. Use **↑ ↓** to move, **↩** or a click to paste, **⌘1–⌘9** to paste one of the first nine clips.
 - **⌘P** pins a clip (pinned clips are never trimmed), **⌘⌫** deletes one, **esc** closes the window.
 - Copied images (screenshots, pictures) are saved too and show as thumbnails. Type "image" to find them.
-- Settings (menu bar icon → Settings…): history size, saving images, launch at login, plain-text pasting, and apps to ignore.
+- Settings: history size, saving images, launch at login, plain-text pasting, and apps to ignore.
 
 To paste for you, ClipKeep needs **Accessibility** access (System Settings → Privacy & Security → Accessibility). Without it, the clip is copied and you press ⌘V yourself.
 
