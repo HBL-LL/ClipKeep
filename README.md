@@ -31,3 +31,7 @@ open build/ClipKeep.app
 ```
 
 The app is signed ad hoc, so macOS treats every rebuild as a new app: after rebuilding, turn ClipKeep's Accessibility permission off and on again.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
