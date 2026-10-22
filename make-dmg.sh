@@ -14,6 +14,8 @@ staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 ditto "$app" "$staging/ClipKeep.app"
 ln -s /Applications "$staging/Applications"
+# Help for the "could not verify" warning macOS shows for apps without a paid Developer ID.
+cp Resources/DMG/*.txt "$staging/"
 
 rm -f "$dmg"
 hdiutil create -quiet -volname "ClipKeep $version" -srcfolder "$staging" \
