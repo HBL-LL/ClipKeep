@@ -86,8 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(
-            systemSymbolName: "doc.on.clipboard", accessibilityDescription: "ClipKeep")
+        statusItem.button?.image = Self.menuBarIcon()
 
         let menu = NSMenu()
         menu.delegate = self
@@ -110,6 +109,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.action = #selector(statusItemClicked(_:))
         statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         statusItem.button?.toolTip = "ClipKeep: click for history, right-click for options"
+    }
+
+    /// The ClipKeep symbol as a template image, so macOS tints it for light and dark
+    /// menu bars. Falls back to a system symbol when running outside the app bundle.
+    private static func menuBarIcon() -> NSImage? {
+        if let image = Bundle.main.image(forResource: "menubarTemplate") {
+            image.isTemplate = true
+            image.size = NSSize(width: 18, height: 18)
+            image.accessibilityDescription = "ClipKeep"
+            return image
+        }
+        return NSImage(systemSymbolName: "doc.on.clipboard", accessibilityDescription: "ClipKeep")
     }
 
     @objc private func statusItemClicked(_ sender: NSStatusBarButton) {

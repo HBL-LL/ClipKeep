@@ -8,6 +8,8 @@
 	<string>ClipKeep</string>
 	<key>CFBundleExecutable</key>
 	<string>ClipKeep</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>
 	<string>local.clipkeep</string>
 	<key>CFBundleInfoDictionaryVersion</key>

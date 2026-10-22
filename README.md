@@ -1,4 +1,9 @@
-# ClipKeep
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/clipkeep-horizontal-color-on-dark.svg">
+    <img src="docs/brand/clipkeep-horizontal-color.svg" alt="ClipKeep" width="360">
+  </picture>
+</h1>
 
 A small menu bar clipboard manager for macOS 14+.
 
