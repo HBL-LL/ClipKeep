@@ -12,16 +12,28 @@ enum Paster {
         _ = AXIsProcessTrustedWithOptions(options)
     }
 
-    static func write(_ clip: Clip, plainText: Bool) {
+    /// Returns false if an image clip's file couldn't be read.
+    @discardableResult
+    static func write(_ clip: Clip, plainText: Bool, imageURL: URL?) -> Bool {
         let item = NSPasteboardItem()
-        if !plainText, let rtf = clip.rtf {
-            item.setData(rtf, forType: .rtf)
+        if clip.isImage {
+            guard let imageURL, let png = try? Data(contentsOf: imageURL) else { return false }
+            item.setData(png, forType: .png)
+            // Some older apps only accept TIFF.
+            if let tiff = NSImage(data: png)?.tiffRepresentation {
+                item.setData(tiff, forType: .tiff)
+            }
+        } else {
+            if !plainText, let rtf = clip.rtf {
+                item.setData(rtf, forType: .rtf)
+            }
+            item.setString(clip.text, forType: .string)
         }
-        item.setString(clip.text, forType: .string)
 
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.writeObjects([item])
+        return true
     }
 
     /// Sends ⌘V to whichever app is in front.

@@ -46,7 +46,9 @@ struct ClipListView: View {
             ScrollView {
                 LazyVStack(spacing: 2) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, clip in
-                        ClipRow(clip: clip, index: index, selected: index == model.selection)
+                        ClipRow(
+                            clip: clip, index: index, selected: index == model.selection,
+                            thumbnail: clip.image.flatMap { Thumbnails.thumbnail(for: store.imageURL(for: $0)) })
                             .id(clip.id)
                             .onTapGesture { onPaste(clip) }
                             .onHover { inside in if inside { model.selection = index } }
@@ -99,6 +101,7 @@ struct ClipRow: View {
     let clip: Clip
     let index: Int
     let selected: Bool
+    let thumbnail: NSImage?
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -107,13 +110,15 @@ struct ClipRow: View {
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(clip.preview)
-                    .font(.system(size: 13))
-                    .lineLimit(2)
+                content
                     .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: 4) {
                     if clip.pinned {
                         Image(systemName: "pin.fill")
+                    }
+                    if let image = clip.image {
+                        Text("\(image.width) × \(image.height)")
+                        Text("·")
                     }
                     Text(clip.sourceName ?? "Unknown app")
                     Text("·")
@@ -135,6 +140,28 @@ struct ClipRow: View {
             RoundedRectangle(cornerRadius: 7)
                 .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear))
         .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if clip.isImage {
+            if let thumbnail {
+                Image(nsImage: thumbnail)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 220, maxHeight: 72, alignment: .leading)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.separator))
+            } else {
+                Label("Image unavailable", systemImage: "photo")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text(clip.preview)
+                .font(.system(size: 13))
+                .lineLimit(2)
+        }
     }
 
     @ViewBuilder

@@ -52,7 +52,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: Pasting
 
     private func paste(_ clip: Clip) {
-        Paster.write(clip, plainText: settings.pastePlainText)
+        let imageURL = clip.image.map(store.imageURL(for:))
+        guard Paster.write(clip, plainText: settings.pastePlainText, imageURL: imageURL) else {
+            NSSound.beep()
+            return
+        }
         monitor.skipCurrentContents()
         store.markUsed(clip.id)
 

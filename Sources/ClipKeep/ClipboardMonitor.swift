@@ -57,17 +57,46 @@ final class ClipboardMonitor {
             if bundleID == Bundle.main.bundleIdentifier || settings.isExcluded(bundleID) { return }
         }
 
-        guard let text = pasteboard.string(forType: .string),
-              text.utf16.count <= Self.maxTextLength,
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return }
+        // Text wins when a copy has both, so copying a file in Finder records its name
+        // rather than its icon.
+        if let text = pasteboard.string(forType: .string),
+           !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            guard text.utf16.count <= Self.maxTextLength else { return }
+            store.add(
+                text: text,
+                rtf: richText(),
+                sourceBundleID: app?.bundleIdentifier,
+                sourceName: app?.localizedName,
+                limit: settings.historyLimit)
+            return
+        }
 
-        store.add(
-            text: text,
-            rtf: richText(),
-            sourceBundleID: app?.bundleIdentifier,
-            sourceName: app?.localizedName,
-            limit: settings.historyLimit)
+        if settings.saveImages, !types.contains(.fileURL), let data = imageData() {
+            saveImage(data, sourceBundleID: app?.bundleIdentifier, sourceName: app?.localizedName)
+        }
+    }
+
+    private static let maxImageBytes = 50 * 1024 * 1024
+
+    private func imageData() -> Data? {
+        let data = pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff)
+        guard let data, data.count <= Self.maxImageBytes else { return nil }
+        return data
+    }
+
+    /// PNG encoding a big screenshot can take a moment, so it runs off the main thread.
+    private func saveImage(_ data: Data, sourceBundleID: String?, sourceName: String?) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let encoded = ImageEncoder.encode(data) else { return }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.store.add(
+                        image: encoded, sourceBundleID: sourceBundleID, sourceName: sourceName,
+                        limit: self.settings.historyLimit)
+                }
+            }
+        }
     }
 
     /// RTF if the copy has it; otherwise HTML converted to RTF (web pages usually copy as HTML).

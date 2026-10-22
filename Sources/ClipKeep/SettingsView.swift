@@ -41,6 +41,7 @@ struct SettingsView: View {
                 }
                 Stepper("Keep the last \(settings.historyLimit) clips",
                         value: $settings.historyLimit, in: 10...2000, step: 10)
+                Toggle("Save copied images", isOn: $settings.saveImages)
                 LabeledContent("Open history", value: "⇧⌘V")
             }
 
