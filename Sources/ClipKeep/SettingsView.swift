@@ -90,9 +90,19 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section {
+                HStack {
+                    Text("Right-click the menu bar icon to pause recording or clear history.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Quit ClipKeep") { NSApp.terminate(nil) }
+                }
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: 560)
+        .frame(width: 460, height: 620)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             window.hasAccessibility = Paster.hasAccessibility
         }

@@ -24,12 +24,20 @@ final class PanelController: NSObject, NSWindowDelegate {
     private let store: ClipStore
     private let model = PanelModel()
     private let onPaste: (Clip) -> Void
+    private let onOpenSettings: () -> Void
     private var panel: ClipPanel!
     private var keyMonitor: Any?
+    /// When the panel last closed. A click on the menu bar icon closes the panel
+    /// (it loses focus) before the click arrives, so that click shouldn't reopen it.
+    private var lastHidden = Date.distantPast
 
-    init(store: ClipStore, onPaste: @escaping (Clip) -> Void) {
+    /// Called with true when the panel opens and false when it closes.
+    var onVisibilityChange: ((Bool) -> Void)?
+
+    init(store: ClipStore, onPaste: @escaping (Clip) -> Void, onOpenSettings: @escaping () -> Void) {
         self.store = store
         self.onPaste = onPaste
+        self.onOpenSettings = onOpenSettings
         super.init()
         buildPanel()
     }
@@ -60,7 +68,11 @@ final class PanelController: NSObject, NSWindowDelegate {
             store: store, model: model,
             onPaste: { [weak self] clip in self?.paste(clip) },
             onTogglePin: { [weak self] clip in self?.togglePin(clip) },
-            onDelete: { [weak self] clip in self?.delete(clip) })
+            onDelete: { [weak self] clip in self?.delete(clip) },
+            onOpenSettings: { [weak self] in
+                self?.hide()
+                self?.onOpenSettings()
+            })
         let host = NSHostingView(rootView: list)
         host.translatesAutoresizingMaskIntoConstraints = false
         background.addSubview(host)
@@ -76,23 +88,37 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     // MARK: Showing and hiding
 
-    func toggle() {
-        panel.isVisible ? hide() : show()
+    /// Opens or closes the history. With an anchor (the menu bar icon's frame) it opens
+    /// just below it; otherwise near the mouse.
+    func toggle(below anchor: NSRect? = nil) {
+        if panel.isVisible {
+            hide()
+        } else if Date().timeIntervalSince(lastHidden) > 0.3 {
+            show(below: anchor)
+        }
     }
 
-    func show() {
+    func show(below anchor: NSRect? = nil) {
         model.query = ""
         model.selection = 0
         model.focusToken += 1
-        positionNearMouse()
+        if let anchor {
+            position(below: anchor)
+        } else {
+            positionNearMouse()
+        }
         panel.makeKeyAndOrderFront(nil)
         panel.invalidateShadow()
         installKeyMonitor()
+        onVisibilityChange?(true)
     }
 
     func hide() {
+        guard panel.isVisible else { return }
         removeKeyMonitor()
         panel.orderOut(nil)
+        lastHidden = Date()
+        onVisibilityChange?(false)
     }
 
     func windowDidResignKey(_ notification: Notification) {
@@ -101,16 +127,30 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     private func positionNearMouse() {
         let mouse = NSEvent.mouseLocation
-        let screen = NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+        place(at: NSPoint(x: mouse.x, y: mouse.y - 10), on: screen(containing: mouse))
+    }
+
+    /// Centers the panel under the menu bar icon.
+    private func position(below anchor: NSRect) {
+        place(at: NSPoint(x: anchor.midX, y: anchor.minY - 4),
+              on: screen(containing: NSPoint(x: anchor.midX, y: anchor.midY)))
+    }
+
+    /// Puts the panel's top-center at `point`, kept inside the screen's visible area.
+    private func place(at point: NSPoint, on screen: NSScreen?) {
         guard let visible = screen?.visibleFrame else {
             panel.center()
             return
         }
         let size = panel.frame.size
-        var origin = NSPoint(x: mouse.x - size.width / 2, y: mouse.y - size.height - 10)
+        var origin = NSPoint(x: point.x - size.width / 2, y: point.y - size.height)
         origin.x = min(max(origin.x, visible.minX + 8), visible.maxX - size.width - 8)
         origin.y = min(max(origin.y, visible.minY + 8), visible.maxY - size.height - 8)
         panel.setFrameOrigin(origin)
+    }
+
+    private func screen(containing point: NSPoint) -> NSScreen? {
+        NSScreen.screens.first { NSMouseInRect(point, $0.frame, false) } ?? NSScreen.main
     }
 
     // MARK: Keyboard
