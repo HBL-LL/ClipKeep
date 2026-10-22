@@ -52,18 +52,6 @@ This makes `build/ClipKeep.app`, `build/ClipKeep.zip` and `build/ClipKeep.dmg` (
 
 The app is signed ad hoc, so macOS treats every rebuild as a new app: after rebuilding, turn ClipKeep's Accessibility permission off and on again.
 
-### Publishing a release
-
-1. Raise `CFBundleShortVersionString` (and `CFBundleVersion`) in `Resources/Info.plist`, and commit.
-2. Run `./build.sh`.
-3. Create the release with the DMG and zip attached; the tag must match the version:
-
-```bash
-gh release create v1.2.0 build/ClipKeep.dmg build/ClipKeep.zip --title "ClipKeep 1.2.0" --notes "What changed"
-```
-
-The DMG is for people installing by hand. The in-app updater looks for an asset named exactly `ClipKeep.zip` and checks that the app inside has the release's version.
-
 ## License
 
 MIT. See [LICENSE](LICENSE).
