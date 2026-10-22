@@ -20,6 +20,7 @@ final class Settings: ObservableObject {
         static let pasteDirectly = "pasteDirectly"
         static let pastePlainText = "pastePlainText"
         static let ignoreConcealed = "ignoreConcealed"
+        static let saveImages = "saveImages"
         static let excludedApps = "excludedApps"
     }
 
@@ -36,6 +37,8 @@ final class Settings: ObservableObject {
     @Published var pastePlainText: Bool { didSet { defaults.set(pastePlainText, forKey: Key.pastePlainText) } }
     /// Skip clipboard content that password managers mark as hidden.
     @Published var ignoreConcealed: Bool { didSet { defaults.set(ignoreConcealed, forKey: Key.ignoreConcealed) } }
+    /// Record copied images (screenshots, pictures) as well as text.
+    @Published var saveImages: Bool { didSet { defaults.set(saveImages, forKey: Key.saveImages) } }
     @Published var excludedApps: [ExcludedApp] {
         didSet {
             if let data = try? JSONEncoder().encode(excludedApps) {
@@ -51,12 +54,14 @@ final class Settings: ObservableObject {
             Key.pasteDirectly: true,
             Key.pastePlainText: false,
             Key.ignoreConcealed: true,
+            Key.saveImages: true,
         ])
         historyLimit = defaults.integer(forKey: Key.historyLimit)
         recording = defaults.bool(forKey: Key.recording)
         pasteDirectly = defaults.bool(forKey: Key.pasteDirectly)
         pastePlainText = defaults.bool(forKey: Key.pastePlainText)
         ignoreConcealed = defaults.bool(forKey: Key.ignoreConcealed)
+        saveImages = defaults.bool(forKey: Key.saveImages)
         if let data = defaults.data(forKey: Key.excludedApps),
            let apps = try? JSONDecoder().decode([ExcludedApp].self, from: data) {
             excludedApps = apps

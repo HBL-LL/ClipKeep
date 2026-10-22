@@ -7,7 +7,8 @@ A small menu bar clipboard manager for macOS 14+.
 - **⇧⌘V** opens your clipboard history near the mouse. You can also use the menu bar icon, or open the app again.
 - Type to search. Use **↑ ↓** to move, **↩** or a click to paste, **⌘1–⌘9** to paste one of the first nine clips.
 - **⌘P** pins a clip (pinned clips are never trimmed), **⌘⌫** deletes one, **esc** closes the window.
-- Settings (menu bar icon → Settings…): history size, launch at login, plain-text pasting, and apps to ignore.
+- Copied images (screenshots, pictures) are saved too and show as thumbnails. Type "image" to find them.
+- Settings (menu bar icon → Settings…): history size, saving images, launch at login, plain-text pasting, and apps to ignore.
 
 To paste for you, ClipKeep needs **Accessibility** access (System Settings → Privacy & Security → Accessibility). Without it, the clip is copied and you press ⌘V yourself.
 
@@ -15,8 +16,9 @@ To paste for you, ClipKeep needs **Accessibility** access (System Settings → P
 
 | Part | File | What it does |
 | --- | --- | --- |
-| Clipboard watcher | `ClipboardMonitor.swift` | Checks the clipboard's change counter every 0.5 s. Saves plain text plus rich text (RTF, or HTML converted to RTF). Skips password-manager content, ignored apps, blank text and its own pastes. |
-| History | `ClipStore.swift` | Newest first; copying the same text again moves it to the top. Keeps the last N unpinned clips. Saved to `~/Library/Application Support/ClipKeep/history.json` (owner-only permissions). |
+| Clipboard watcher | `ClipboardMonitor.swift` | Checks the clipboard's change counter every 0.5 s. Saves plain text plus rich text (RTF, or HTML converted to RTF); when a copy has no text, saves its image (up to 50 MB). Skips password-manager content, ignored apps, blank text, file copies' icons and its own pastes. |
+| History | `ClipStore.swift` | Newest first; copying the same text or image again moves it to the top. Keeps the last N unpinned clips. Saved to `~/Library/Application Support/ClipKeep/history.json`, with images as PNG files in `images/` next to it (owner-only permissions). |
+| Images | `ImageSupport.swift` | Converts copied images to PNG off the main thread, matches repeats by their pixels, and makes cached thumbnails for the list. |
 | Popup window | `PanelController.swift`, `ClipListView.swift` | A floating panel that takes typing without stealing focus from the app you're in, so the paste lands there. |
 | Paste | `Paster.swift` | Writes the clip to the clipboard and sends ⌘V. |
 | Hotkey | `HotKey.swift` | System-wide ⇧⌘V via Carbon's `RegisterEventHotKey`. |
