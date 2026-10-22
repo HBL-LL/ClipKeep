@@ -4,9 +4,9 @@ A small menu bar clipboard manager for macOS 14+.
 
 ## Install
 
-1. Download `ClipKeep.zip` from the [latest release](https://github.com/Hamza-Boulila/ClipKeep/releases/latest) and unzip it.
-2. Move `ClipKeep.app` to your Applications folder.
-3. The first time, right-click it and choose **Open**. ClipKeep isn't notarized by Apple, so macOS asks once. If it still won't open, go to System Settings → Privacy & Security and click **Open Anyway**.
+1. Download `ClipKeep.dmg` from the [latest release](https://github.com/Hamza-Boulila/ClipKeep/releases/latest) and open it.
+2. Drag **ClipKeep** onto the **Applications** folder next to it.
+3. Open ClipKeep from Applications. The first time, right-click it and choose **Open**. ClipKeep isn't notarized by Apple, so macOS asks once. If it still won't open, go to System Settings → Privacy & Security and click **Open Anyway**.
 
 Works on Apple Silicon and Intel Macs running macOS 14 or later.
 
@@ -48,7 +48,7 @@ Needs only Apple's Command Line Tools (no Xcode):
 open build/ClipKeep.app
 ```
 
-This makes `build/ClipKeep.app` and `build/ClipKeep.zip` (Apple Silicon + Intel).
+This makes `build/ClipKeep.app`, `build/ClipKeep.zip` and `build/ClipKeep.dmg` (Apple Silicon + Intel). `./make-dmg.sh` repackages an existing build as a DMG without rebuilding.
 
 The app is signed ad hoc, so macOS treats every rebuild as a new app: after rebuilding, turn ClipKeep's Accessibility permission off and on again.
 
@@ -56,13 +56,13 @@ The app is signed ad hoc, so macOS treats every rebuild as a new app: after rebu
 
 1. Raise `CFBundleShortVersionString` (and `CFBundleVersion`) in `Resources/Info.plist`, and commit.
 2. Run `./build.sh`.
-3. Create the release with the zip attached; the tag must match the version:
+3. Create the release with the DMG and zip attached; the tag must match the version:
 
 ```bash
-gh release create v1.2.0 build/ClipKeep.zip --title "ClipKeep 1.2.0" --notes "What changed"
+gh release create v1.2.0 build/ClipKeep.dmg build/ClipKeep.zip --title "ClipKeep 1.2.0" --notes "What changed"
 ```
 
-The in-app updater looks for an asset named exactly `ClipKeep.zip` and checks that the app inside has the release's version.
+The DMG is for people installing by hand. The in-app updater looks for an asset named exactly `ClipKeep.zip` and checks that the app inside has the release's version.
 
 ## License
 

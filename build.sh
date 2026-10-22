@@ -1,5 +1,6 @@
 #!/bin/bash
-# Builds ClipKeep.app (Apple Silicon + Intel) into ./build, plus ClipKeep.zip for releases.
+# Builds ClipKeep.app (Apple Silicon + Intel) into ./build, plus ClipKeep.zip (used by
+# the in-app updater) and ClipKeep.dmg (drag-to-install) for releases.
 # Needs only Apple's Command Line Tools.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -22,3 +23,5 @@ ditto -c -k --keepParent "$app" build/ClipKeep.zip
 
 version="$(plutil -extract CFBundleShortVersionString raw Resources/Info.plist)"
 echo "Built $app and build/ClipKeep.zip (version $version)"
+
+./make-dmg.sh
