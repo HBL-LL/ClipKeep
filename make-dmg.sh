@@ -39,9 +39,13 @@ cp Resources/DMG/*.txt "$mount_vol/"
 mkdir -p "$mount_vol/.background"
 cp Resources/DMG/background.tiff "$mount_vol/.background/"
 
-# Set custom volume icon so the mounted disk on Desktop/Sidebar displays the ClipKeep icon
+# Set custom volume icon on the mounted disk
 if [ -f "Resources/AppIcon.icns" ]; then
-    cp Resources/AppIcon.icns "$mount_vol/.VolumeIcon.icns"
+    swift - << SWIFT
+import Cocoa
+let icon = NSImage(contentsOfFile: "Resources/AppIcon.icns")
+NSWorkspace.shared.setIcon(icon, forFile: "$mount_vol", options: [])
+SWIFT
     SetFile -c icnC "$mount_vol/.VolumeIcon.icns" 2>/dev/null || true
     SetFile -a C "$mount_vol" 2>/dev/null || true
     SetFile -a V "$mount_vol/.VolumeIcon.icns" 2>/dev/null || true
@@ -65,7 +69,7 @@ tell application "Finder"
         set background picture of theViewOptions to file ".background:background.tiff"
         set position of item "ClipKeep.app" of container window to {160, 190}
         set position of item "Applications" of container window to {500, 190}
-        set position of item "Can't open ClipKeep? Read me.txt" of container window to {500, 375}
+        set position of item "Can't open ClipKeep? Read me.txt" of container window to {500, 348}
         update without registering applications
         delay 2
         close
@@ -81,6 +85,14 @@ hdiutil detach "$mount_vol" -quiet 2>/dev/null || hdiutil detach "$mount_vol" -f
 # Convert to final compressed read-only DMG
 rm -f "$dmg"
 hdiutil convert "$staging_dmg" -format UDZO -imagekey zlib-level=9 -ov -o "$dmg" -quiet
+
+# Also set the custom icon on the .dmg file itself
+swift - << SWIFT
+import Cocoa
+let icon = NSImage(contentsOfFile: "Resources/AppIcon.icns")
+NSWorkspace.shared.setIcon(icon, forFile: "$dmg", options: [])
+SWIFT
+
 rm -rf "$staging_dir"
 trap - EXIT
 

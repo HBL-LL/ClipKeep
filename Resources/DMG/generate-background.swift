@@ -172,13 +172,13 @@ let html = """
     filter: drop-shadow(0 2px 8px rgba(212, 90, 18, 0.6));
   }
 
-  /* Bottom Help Card */
+  /* Bottom Help Card - slightly taller for comfortable label padding */
   .help-card {
     position: absolute;
     left: 40px;
     right: 40px;
-    bottom: 20px;
-    height: 104px;
+    bottom: 16px;
+    height: 110px;
     border-radius: 16px;
     background: linear-gradient(135deg, rgba(35, 31, 28, 0.88) 0%, rgba(23, 20, 18, 0.94) 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -212,7 +212,7 @@ let html = """
     display: flex;
     align-items: center;
     gap: 7px;
-    margin-bottom: 4px;
+    margin-bottom: 5px;
   }
 
   .help-title-badge {
@@ -242,15 +242,16 @@ let html = """
     font-style: normal;
   }
 
+  /* Readme slot indicator - aligned precisely with icon at {500, 348} */
   .readme-slot {
     position: absolute;
     right: 82px;
-    top: 14px;
+    top: 8px;
     width: 76px;
-    height: 76px;
-    border-radius: 14px;
-    border: 1.5px dashed rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.02);
+    height: 72px;
+    border-radius: 12px;
+    border: 1.5px dashed rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.015);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -258,9 +259,9 @@ let html = """
   }
 
   .readme-slot svg {
-    width: 24px;
-    height: 24px;
-    opacity: 0.18;
+    width: 22px;
+    height: 22px;
+    opacity: 0.16;
     fill: none;
     stroke: #FFFFFF;
     stroke-width: 1.5;
