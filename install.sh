@@ -1,7 +1,7 @@
 #!/bin/bash
 # Installs the latest ClipKeep release into /Applications and opens it.
 #
-#   curl -fsSL https://raw.githubusercontent.com/Hamza-Boulila/ClipKeep/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/HBL-LL/ClipKeep/main/install.sh | bash
 #
 # Downloading with curl skips the "could not verify" warning macOS shows for apps
 # downloaded in a browser that aren't signed with a paid Apple Developer ID.
@@ -9,7 +9,7 @@
 # code signature before anything is installed.
 set -euo pipefail
 
-repo="Hamza-Boulila/ClipKeep"
+repo="HBL-LL/ClipKeep"
 bundle_id="local.clipkeep"
 dest="${CLIPKEEP_INSTALL_DIR:-/Applications}"
 

@@ -16,14 +16,14 @@ Works on Apple Silicon and Intel Macs running macOS 14 or later.
 Open Terminal and paste:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Hamza-Boulila/ClipKeep/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/HBL-LL/ClipKeep/main/install.sh | bash
 ```
 
 It downloads the latest release, checks its checksum and signature, puts ClipKeep in Applications and opens it, with no security warning.
 
 ### Or with the DMG
 
-1. Download `ClipKeep.dmg` from the [latest release](https://github.com/Hamza-Boulila/ClipKeep/releases/latest), open it, and drag **ClipKeep** onto **Applications**.
+1. Download `ClipKeep.dmg` from the [latest release](https://github.com/HBL-LL/ClipKeep/releases/latest), open it, and drag **ClipKeep** onto **Applications**.
 2. Open ClipKeep. ClipKeep isn't signed with a paid Apple Developer ID, so macOS says it "could not verify" it. Click **Done**.
 3. Go to System Settings → Privacy & Security, scroll down, click **Open Anyway** next to ClipKeep, and enter your password.
 4. Open ClipKeep again and confirm. You only have to do this once.
