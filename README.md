@@ -5,6 +5,15 @@
   </picture>
 </h1>
 
+<p align="center">
+  <a href="https://github.com/HBL-LL/ClipKeep/releases/latest"><img src="https://img.shields.io/github/v/release/HBL-LL/ClipKeep" alt="Latest release"></a>
+  <a href="https://github.com/HBL-LL/ClipKeep/releases"><img src="https://img.shields.io/github/downloads/HBL-LL/ClipKeep/total" alt="Downloads"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-000000?logo=apple&logoColor=white" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Apple%20Silicon%20%2B%20Intel-universal-555555" alt="Apple Silicon + Intel">
+  <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/HBL-LL/ClipKeep" alt="MIT License"></a>
+</p>
+
 A small menu bar clipboard manager for macOS 14+.
 
 ## Install
@@ -39,11 +48,15 @@ ClipKeep has to be somewhere it can replace itself, such as your Applications fo
 ## Use it
 
 - **Click the menu bar icon** to open your clipboard history under it, or press **⇧⌘V** to open it near the mouse.
-- **Right-click the icon** for Pause Recording, Clear History and Quit. In the history window, the **trash** clears your history (pinned clips are kept) and the **gear** opens Settings. The shortcut hints at the bottom are buttons too.
+- **Right-click the icon** for Pause Recording, Clear History, Check for Updates, Settings and Quit. In the history window, the **trash** clears your history (pinned clips are kept) and the **gear** opens Settings. The shortcut hints at the bottom are buttons too.
 - Type to search. Use **↑ ↓** to move, **↩** or a click to paste, **⌘1–⌘9** to paste one of the first nine clips.
 - **⌘P** pins a clip (pinned clips are never trimmed), **⌘⌫** deletes one, **esc** closes the window.
 - Copied images (screenshots, pictures) are saved too and show as thumbnails. Type "image" to find them.
-- Settings: history size, saving images, launch at login, plain-text pasting, and apps to ignore.
+- Settings has four tabs:
+  - **General:** launch at login, history size, saving images, Clear History.
+  - **Pasting:** automatic or plain-text pasting, and whether Accessibility access is allowed.
+  - **Privacy:** skipping passwords and apps to ignore.
+  - **Updates:** automatic checks, Check for Updates, and a link to the release notes.
 
 To paste for you, ClipKeep needs **Accessibility** access (System Settings → Privacy & Security → Accessibility). Without it, the clip is copied and you press ⌘V yourself.
 
@@ -57,7 +70,26 @@ To paste for you, ClipKeep needs **Accessibility** access (System Settings → P
 | Popup window | `PanelController.swift`, `ClipListView.swift` | A floating panel that takes typing without stealing focus from the app you're in, so the paste lands there. |
 | Paste | `Paster.swift` | Writes the clip to the clipboard and sends ⌘V. |
 | Hotkey | `HotKey.swift` | System-wide ⇧⌘V via Carbon's `RegisterEventHotKey`. |
+| Settings | `Settings.swift`, `SettingsView.swift` | Options saved in `UserDefaults`, shown in a toolbar-tabbed window that resizes to fit each tab. |
 | Updates | `UpdateCore.swift`, `Updater.swift` | Reads the latest GitHub release, downloads `ClipKeep.zip`, checks its SHA-256, bundle ID, version and code signature, swaps the app in place (rolling back on failure) and relaunches. |
+
+## Built with
+
+Swift and Apple's own frameworks only, with no third-party dependencies.
+
+| Technology | Used for |
+| --- | --- |
+| Swift 6 toolchain, Swift Package Manager | Language and build (Swift 5 language mode), as a universal Apple Silicon + Intel binary |
+| SwiftUI | The history list and the Settings tabs |
+| AppKit | Menu bar item, floating panel, Settings window, clipboard access (`NSPasteboard`) |
+| Combine | Reacting to changes in settings and history |
+| Carbon (HIToolbox) | The system-wide ⇧⌘V hotkey and key codes |
+| Core Graphics events, Accessibility API | Sending ⌘V to the front app, checking Accessibility access |
+| ImageIO | Converting copied images to PNG and making thumbnails |
+| CryptoKit | SHA-256 for matching repeated images and checking update downloads |
+| ServiceManagement | Launch at login (`SMAppService`) |
+| URLSession, GitHub Releases API | Checking for and downloading updates |
+| Bash, `codesign`, `hdiutil`, AppleScript | Building, ad hoc signing, the branded DMG and the install script |
 
 ## Build
 
