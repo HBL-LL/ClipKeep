@@ -4,36 +4,20 @@ import SwiftUI
 struct ClipListView: View {
     @ObservedObject var store: ClipStore
     @ObservedObject var model: PanelModel
-    let onPaste: (Clip) -> Void
-    let onTogglePin: (Clip) -> Void
-    let onDelete: (Clip) -> Void
-    let onOpenSettings: () -> Void
+    let actions: PanelActions
 
     @FocusState private var searchFocused: Bool
 
     var body: some View {
         let items = store.search(model.query)
+        let hasSelection = items.indices.contains(model.selection)
 
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search clipboard history", text: $model.query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 15))
-                    .focused($searchFocused)
-                Button(action: onOpenSettings) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.borderless)
-                .help("Settings")
+            header(canClear: store.clips.contains { !$0.pinned })
+
+            if model.confirmingClear {
+                confirmClearBar
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
 
             Divider()
 
@@ -44,12 +28,64 @@ struct ClipListView: View {
             }
 
             Divider()
-            footer(count: items.count)
+            footer(count: items.count, hasSelection: hasSelection)
         }
         .frame(width: 440, height: 480)
         .onAppear { searchFocused = true }
         .onChange(of: model.focusToken) { searchFocused = true }
     }
+
+    // MARK: Header
+
+    private func header(canClear: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search clipboard history", text: $model.query)
+                .textFieldStyle(.plain)
+                .font(.system(size: 15))
+                .focused($searchFocused)
+            IconButton(symbol: "trash", help: "Clear history") {
+                model.confirmingClear = true
+            }
+            .disabled(!canClear)
+            IconButton(symbol: "gearshape", help: "Settings", action: actions.openSettings)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private var confirmClearBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Delete all clips?").font(.system(size: 12, weight: .semibold))
+                Text("Pinned clips are kept.").font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button("Cancel") { model.confirmingClear = false }
+                .controlSize(.small)
+            // Drawn by hand so it stays red: the panel never makes ClipKeep the active app,
+            // and standard prominent buttons turn grey in inactive apps.
+            Button(role: .destructive, action: actions.clearHistory) {
+                Text("Delete All")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.red))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .pointingHandCursor()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.red.opacity(0.10))
+    }
+
+    // MARK: List
 
     private func list(_ items: [Clip]) -> some View {
         ScrollViewReader { proxy in
@@ -60,13 +96,13 @@ struct ClipListView: View {
                             clip: clip, index: index, selected: index == model.selection,
                             thumbnail: clip.image.flatMap { Thumbnails.thumbnail(for: store.imageURL(for: $0)) })
                             .id(clip.id)
-                            .onTapGesture { onPaste(clip) }
+                            .onTapGesture { actions.paste(clip) }
                             .onHover { inside in if inside { model.selection = index } }
                             .contextMenu {
-                                Button("Paste") { onPaste(clip) }
-                                Button(clip.pinned ? "Unpin" : "Pin") { onTogglePin(clip) }
+                                Button("Paste") { actions.paste(clip) }
+                                Button(clip.pinned ? "Unpin" : "Pin") { actions.togglePin(clip) }
                                 Divider()
-                                Button("Delete", role: .destructive) { onDelete(clip) }
+                                Button("Delete", role: .destructive) { actions.delete(clip) }
                             }
                     }
                 }
@@ -91,19 +127,97 @@ struct ClipListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func footer(count: Int) -> some View {
-        HStack(spacing: 12) {
-            Text("↩ Paste")
-            Text("⌘P Pin")
-            Text("⌘⌫ Delete")
-            Text("esc Close")
+    // MARK: Footer
+
+    /// Each hint is also a button that does the same thing as its key.
+    private func footer(count: Int, hasSelection: Bool) -> some View {
+        HStack(spacing: 6) {
+            ShortcutButton(keys: "↩", label: "Paste", action: actions.pasteSelected)
+                .disabled(!hasSelection)
+            ShortcutButton(keys: "⌘P", label: "Pin", action: actions.pinSelected)
+                .disabled(!hasSelection)
+            ShortcutButton(keys: "⌘⌫", label: "Delete", action: actions.deleteSelected)
+                .disabled(!hasSelection)
+            ShortcutButton(keys: "esc", label: "Close", action: actions.close)
             Spacer()
             Text("\(count) \(count == 1 ? "clip" : "clips")")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+    }
+}
+
+/// A small borderless icon button for the header.
+private struct IconButton: View {
+    let symbol: String
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .help(help)
+        .pointingHandCursor()
+    }
+}
+
+/// A footer hint drawn as a keycap plus label, clickable like the key it shows.
+private struct ShortcutButton: View {
+    let keys: String
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(keys)
+                    .font(.system(size: 10, weight: .medium))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 3)
+                            .strokeBorder(Color.secondary.opacity(0.5), lineWidth: 0.5))
+                Text(label)
+                    .font(.caption)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(ShortcutButtonStyle())
+        .help("\(label) (\(keys))")
+        .pointingHandCursor()
+    }
+}
+
+/// Plain look with a soft highlight while pressed and a faded look when disabled.
+private struct ShortcutButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0.05)))
+            .opacity(isEnabled ? 1 : 0.4)
+    }
+}
+
+private extension View {
+    /// Shows the pointing-hand cursor while hovering, like a link.
+    func pointingHandCursor() -> some View {
+        onHover { inside in
+            if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
     }
 }
 

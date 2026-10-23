@@ -39,7 +39,7 @@ ClipKeep has to be somewhere it can replace itself, such as your Applications fo
 ## Use it
 
 - **Click the menu bar icon** to open your clipboard history under it, or press **⇧⌘V** to open it near the mouse.
-- **Right-click the icon** for Pause Recording, Clear History and Quit. The **gear** in the history window opens Settings.
+- **Right-click the icon** for Pause Recording, Clear History and Quit. In the history window, the **trash** clears your history (pinned clips are kept) and the **gear** opens Settings. The shortcut hints at the bottom are buttons too.
 - Type to search. Use **↑ ↓** to move, **↩** or a click to paste, **⌘1–⌘9** to paste one of the first nine clips.
 - **⌘P** pins a clip (pinned clips are never trimmed), **⌘⌫** deletes one, **esc** closes the window.
 - Copied images (screenshots, pictures) are saved too and show as thumbnails. Type "image" to find them.

@@ -2,7 +2,7 @@ import AppKit
 import ServiceManagement
 import SwiftUI
 
-/// Window state for SettingsView. Kept in an object rather than @State because the
+/// Window state for the settings tabs. Kept in an object rather than @State because the
 /// @State macro isn't available without full Xcode.
 @MainActor
 final class SettingsWindowModel: ObservableObject {
@@ -26,43 +26,143 @@ final class SettingsWindowModel: ObservableObject {
     }
 }
 
-struct SettingsView: View {
+/// The Settings window: a Mac-style toolbar of tabs (General, Pasting, Privacy, Updates).
+@MainActor
+enum SettingsWindow {
+    static func make(settings: Settings, updater: Updater, onClearHistory: @escaping () -> Void) -> NSWindow {
+        let model = SettingsWindowModel()
+        let tabs = NSTabViewController()
+        tabs.tabStyle = .toolbar
+
+        func add<Content: View>(_ title: String, _ symbol: String, _ view: Content) {
+            let host = NSHostingController(rootView: view)
+            host.sizingOptions = .preferredContentSize
+            host.title = title  // shown as the window title when this tab is selected
+            let item = NSTabViewItem(viewController: host)
+            item.label = title
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+            tabs.addTabViewItem(item)
+        }
+        add("General", "gearshape",
+            GeneralSettingsView(settings: settings, window: model, onClearHistory: onClearHistory))
+        add("Pasting", "doc.on.clipboard", PastingSettingsView(settings: settings, window: model))
+        add("Privacy", "hand.raised", PrivacySettingsView(settings: settings))
+        add("Updates", "arrow.triangle.2.circlepath", UpdatesSettingsView(settings: settings, updater: updater))
+
+        let window = NSWindow(contentViewController: tabs)
+        window.styleMask = [.titled, .closable]
+        window.toolbarStyle = .preference
+        window.isReleasedWhenClosed = false
+        return window
+    }
+}
+
+private let settingsWidth: CGFloat = 460
+
+// MARK: General
+
+struct GeneralSettingsView: View {
     @ObservedObject var settings: Settings
     @ObservedObject var window: SettingsWindowModel
-    @ObservedObject var updater: Updater
+    let onClearHistory: () -> Void
 
     var body: some View {
         Form {
-            Section("General") {
+            Section {
                 Toggle("Launch at login", isOn: Binding(
                     get: { window.launchAtLogin },
                     set: { window.launchAtLogin = $0; window.setLaunchAtLogin($0) }))
                 if let loginError = window.loginError {
                     Text(loginError).font(.caption).foregroundStyle(.red)
                 }
+                LabeledContent("Open clipboard history") {
+                    Text("⇧⌘V").foregroundStyle(.secondary)
+                }
+            }
+
+            Section {
                 Stepper("Keep the last \(settings.historyLimit) clips",
                         value: $settings.historyLimit, in: 10...2000, step: 10)
                 Toggle("Save copied images", isOn: $settings.saveImages)
-                LabeledContent("Open history", value: "⇧⌘V")
+                LabeledContent {
+                    Button("Clear History…", action: onClearHistory)
+                } label: {
+                    Text("Delete saved clips")
+                    Text("Pinned clips are kept.")
+                }
+            } header: {
+                Text("History")
             }
 
+            Section {
+                HStack {
+                    Spacer()
+                    Button("Quit ClipKeep") { NSApp.terminate(nil) }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: settingsWidth, height: 350)
+    }
+}
+
+// MARK: Pasting
+
+struct PastingSettingsView: View {
+    @ObservedObject var settings: Settings
+    @ObservedObject var window: SettingsWindowModel
+
+    var body: some View {
+        Form {
             Section {
                 Toggle("Paste into the front app automatically", isOn: $settings.pasteDirectly)
                 Toggle("Paste as plain text", isOn: $settings.pastePlainText)
-                if settings.pasteDirectly && !window.hasAccessibility {
-                    HStack {
-                        Text("Needs Accessibility access to press ⌘V for you.")
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Grant Access…") { Paster.requestAccessibility() }
-                    }
-                }
-            } header: {
-                Text("Pasting")
+            } footer: {
+                Text("When automatic pasting is off, choosing a clip copies it and you press ⌘V yourself.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section {
+                if window.hasAccessibility {
+                    Label("Allowed", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    LabeledContent {
+                        Button("Grant Access…") { Paster.requestAccessibility() }
+                    } label: {
+                        Text("Not allowed yet")
+                        Text("ClipKeep needs this to press ⌘V for you.")
+                    }
+                }
+            } header: {
+                Text("Accessibility")
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: settingsWidth, height: 250)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            window.hasAccessibility = Paster.hasAccessibility
+        }
+    }
+}
+
+// MARK: Privacy
+
+struct PrivacySettingsView: View {
+    @ObservedObject var settings: Settings
+
+    var body: some View {
+        Form {
+            Section {
                 Toggle("Skip passwords and other hidden content", isOn: $settings.ignoreConcealed)
+            } footer: {
+                Text("Password managers mark what they copy as hidden; ClipKeep won't save it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 ForEach(settings.excludedApps) { app in
                     HStack {
                         if let icon = AppIcons.icon(for: app.bundleID) {
@@ -79,52 +179,21 @@ struct SettingsView: View {
                         .help("Stop ignoring \(app.name)")
                     }
                 }
-                Menu("Ignore an App…") {
+                Menu("Add App…") {
                     ForEach(addableApps, id: \.bundleID) { app in
                         Button(app.name) { settings.excludedApps.append(app) }
                     }
                 }
             } header: {
-                Text("Privacy")
+                Text("Ignored apps")
             } footer: {
-                Text("Nothing you copy in ignored apps is saved.")
+                Text("Nothing you copy in these apps is saved.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-
-            Section("Updates") {
-                LabeledContent("Version", value: updater.currentVersion)
-                Toggle("Check for updates automatically", isOn: $settings.autoCheckUpdates)
-                HStack {
-                    Text(updater.statusText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if updater.isBusy {
-                        ProgressView().controlSize(.small)
-                    }
-                    Button("Check for Updates") {
-                        Task { await updater.check(announceResult: false) }
-                    }
-                    .disabled(updater.isBusy)
-                }
-            }
-
-            Section {
-                HStack {
-                    Text("Right-click the menu bar icon to pause recording or clear history.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Quit ClipKeep") { NSApp.terminate(nil) }
-                }
-            }
         }
         .formStyle(.grouped)
-        .frame(width: 460, height: 700)
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            window.hasAccessibility = Paster.hasAccessibility
-        }
+        .frame(width: settingsWidth, height: 340)
     }
 
     /// Running apps with a window that aren't already ignored.
@@ -137,5 +206,41 @@ struct SettingsView: View {
                 return ExcludedApp(bundleID: id, name: app.localizedName ?? id)
             }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+}
+
+// MARK: Updates
+
+struct UpdatesSettingsView: View {
+    @ObservedObject var settings: Settings
+    @ObservedObject var updater: Updater
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Version", value: updater.currentVersion)
+                Toggle("Check for updates automatically", isOn: $settings.autoCheckUpdates)
+                LabeledContent {
+                    HStack(spacing: 8) {
+                        if updater.isBusy {
+                            ProgressView().controlSize(.small)
+                        }
+                        Button("Check for Updates") {
+                            Task { await updater.check(announceResult: false) }
+                        }
+                        .disabled(updater.isBusy)
+                    }
+                } label: {
+                    Text(updater.statusText)
+                }
+            }
+
+            Section {
+                Link("Release notes on GitHub",
+                     destination: URL(string: "https://github.com/\(Updater.repository)/releases")!)
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: settingsWidth, height: 200)
     }
 }
