@@ -4,7 +4,7 @@ import AppKit
 @MainActor
 final class Updater: ObservableObject {
     static let shared = Updater()
-    static let repository = "Hamza-Boulila/ClipKeep"
+    static let repository = "HBL-LL/ClipKeep"
 
     enum Status: Equatable {
         case idle

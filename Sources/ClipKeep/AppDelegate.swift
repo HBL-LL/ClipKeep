@@ -169,11 +169,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc func openSettings() {
         if settingsWindow == nil {
-            let view = SettingsView(settings: settings, window: SettingsWindowModel(), updater: Updater.shared)
-            let window = NSWindow(contentViewController: NSHostingController(rootView: view))
-            window.title = "ClipKeep Settings"
-            window.styleMask = [.titled, .closable]
-            window.isReleasedWhenClosed = false
+            let window = SettingsWindow.make(
+                settings: settings, updater: Updater.shared,
+                onClearHistory: { [weak self] in self?.clearHistory() })
             window.center()
             settingsWindow = window
         }

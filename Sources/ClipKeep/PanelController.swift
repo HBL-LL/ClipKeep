@@ -17,6 +17,21 @@ final class PanelModel: ObservableObject {
     @Published var selection = 0
     /// Bumped each time the panel opens so the search field takes focus again.
     @Published var focusToken = 0
+    /// True while the "delete all clips?" confirmation bar is showing.
+    @Published var confirmingClear = false
+}
+
+/// What the history window's buttons do. The keyboard shortcuts call the same functions.
+struct PanelActions {
+    var paste: (Clip) -> Void
+    var togglePin: (Clip) -> Void
+    var delete: (Clip) -> Void
+    var pasteSelected: () -> Void
+    var pinSelected: () -> Void
+    var deleteSelected: () -> Void
+    var close: () -> Void
+    var clearHistory: () -> Void
+    var openSettings: () -> Void
 }
 
 @MainActor
@@ -64,15 +79,20 @@ final class PanelController: NSObject, NSWindowDelegate {
         background.state = .active
         background.maskImage = Self.roundedMask(radius: 12)
 
-        let list = ClipListView(
-            store: store, model: model,
-            onPaste: { [weak self] clip in self?.paste(clip) },
-            onTogglePin: { [weak self] clip in self?.togglePin(clip) },
-            onDelete: { [weak self] clip in self?.delete(clip) },
-            onOpenSettings: { [weak self] in
+        let actions = PanelActions(
+            paste: { [weak self] clip in self?.paste(clip) },
+            togglePin: { [weak self] clip in self?.togglePin(clip) },
+            delete: { [weak self] clip in self?.delete(clip) },
+            pasteSelected: { [weak self] in self?.withSelected { self?.paste($0) } },
+            pinSelected: { [weak self] in self?.withSelected { self?.togglePin($0) } },
+            deleteSelected: { [weak self] in self?.withSelected { self?.delete($0) } },
+            close: { [weak self] in self?.hide() },
+            clearHistory: { [weak self] in self?.clearHistory() },
+            openSettings: { [weak self] in
                 self?.hide()
                 self?.onOpenSettings()
             })
+        let list = ClipListView(store: store, model: model, actions: actions)
         let host = NSHostingView(rootView: list)
         host.translatesAutoresizingMaskIntoConstraints = false
         background.addSubview(host)
@@ -101,6 +121,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     func show(below anchor: NSRect? = nil) {
         model.query = ""
         model.selection = 0
+        model.confirmingClear = false
         model.focusToken += 1
         if let anchor {
             position(below: anchor)
@@ -193,7 +214,12 @@ final class PanelController: NSObject, NSWindowDelegate {
 
         switch key.keyCode {
         case kVK_Escape:
-            hide()
+            // First esc cancels the "delete all" confirmation; otherwise it closes the window.
+            if model.confirmingClear {
+                model.confirmingClear = false
+            } else {
+                hide()
+            }
             return true
         case kVK_UpArrow:
             moveSelection(by: -1, count: items.count)
@@ -228,6 +254,20 @@ final class PanelController: NSObject, NSWindowDelegate {
     }
 
     // MARK: Actions
+
+    /// Runs `action` on the highlighted clip, if there is one.
+    private func withSelected(_ action: (Clip) -> Void) {
+        let items = store.search(model.query)
+        guard items.indices.contains(model.selection) else { return }
+        action(items[model.selection])
+    }
+
+    /// Deletes every clip except pinned ones (after the user confirms in the window).
+    private func clearHistory() {
+        store.clearUnpinned()
+        model.confirmingClear = false
+        model.selection = 0
+    }
 
     private func paste(_ clip: Clip) {
         hide()

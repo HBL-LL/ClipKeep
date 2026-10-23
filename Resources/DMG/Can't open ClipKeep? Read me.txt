@@ -22,7 +22,7 @@ OR SKIP THE WARNING: INSTALL FROM TERMINAL
 
 Open Terminal (Applications > Utilities) and paste this line:
 
-  curl -fsSL https://raw.githubusercontent.com/Hamza-Boulila/ClipKeep/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/HBL-LL/ClipKeep/main/install.sh | bash
 
 It downloads the latest ClipKeep, checks it, puts it in Applications and
 opens it.
