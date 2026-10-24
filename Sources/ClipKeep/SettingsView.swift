@@ -10,6 +10,44 @@ final class SettingsWindowModel: ObservableObject {
     @Published var loginError: String?
     @Published var hasAccessibility = Paster.hasAccessibility
 
+    private var accessibilityObserver: NSObjectProtocol?
+    private var accessibilityPoll: Timer?
+
+    init() {
+        // macOS posts this when any app's Accessibility switch changes; the permission
+        // itself is updated a moment later, so check again shortly after.
+        accessibilityObserver = DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("com.apple.accessibility.api"), object: nil, queue: .main
+        ) { [weak self] _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                MainActor.assumeIsolated { self?.refreshAccessibility() }
+            }
+        }
+        pollAccessibilityUntilAllowed()
+    }
+
+    /// Re-reads whether ClipKeep may press ⌘V for the user.
+    func refreshAccessibility() {
+        hasAccessibility = Paster.hasAccessibility
+        pollAccessibilityUntilAllowed()
+    }
+
+    /// While access is missing, check every couple of seconds so the status flips to
+    /// "Allowed" as soon as the user turns it on, without reopening anything.
+    private func pollAccessibilityUntilAllowed() {
+        if hasAccessibility {
+            accessibilityPoll?.invalidate()
+            accessibilityPoll = nil
+            return
+        }
+        guard accessibilityPoll == nil else { return }
+        let timer = Timer(timeInterval: 1.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshAccessibility() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        accessibilityPoll = timer
+    }
+
     func setLaunchAtLogin(_ enabled: Bool) {
         do {
             if enabled {
@@ -134,15 +172,21 @@ struct PastingSettingsView: View {
                         Text("Not allowed yet")
                         Text("ClipKeep needs this to press ⌘V for you.")
                     }
+                    LabeledContent {
+                        Button("Open Settings") { Paster.openAccessibilitySettings() }
+                    } label: {
+                        Text("Already switched on?")
+                        Text("After an update, macOS can keep ClipKeep's old entry. In Accessibility, select ClipKeep, click −, then click Grant Access again.")
+                    }
                 }
             } header: {
                 Text("Accessibility")
             }
         }
         .formStyle(.grouped)
-        .frame(width: settingsWidth, height: 250)
+        .frame(width: settingsWidth, height: 340)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            window.hasAccessibility = Paster.hasAccessibility
+            window.refreshAccessibility()
         }
     }
 }
