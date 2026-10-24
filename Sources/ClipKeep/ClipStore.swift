@@ -94,6 +94,15 @@ final class ClipStore: ObservableObject {
         scheduleSave()
     }
 
+    /// Replaces a text clip's text. Its rich text is dropped, since it no longer matches.
+    func updateText(_ id: UUID, to text: String) {
+        guard let index = clips.firstIndex(where: { $0.id == id }),
+              !clips[index].isImage, clips[index].text != text else { return }
+        clips[index].text = text
+        clips[index].rtf = nil
+        scheduleSave()
+    }
+
     func togglePin(_ id: UUID) {
         guard let index = clips.firstIndex(where: { $0.id == id }) else { return }
         clips[index].pinned.toggle()

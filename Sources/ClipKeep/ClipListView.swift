@@ -7,32 +7,43 @@ struct ClipListView: View {
     let actions: PanelActions
 
     @FocusState private var searchFocused: Bool
+    @FocusState private var editorFocused: Bool
 
     var body: some View {
-        let items = store.search(model.query)
-        let hasSelection = items.indices.contains(model.selection)
-
         VStack(spacing: 0) {
-            header(canClear: store.clips.contains { !$0.pinned })
-
-            if model.confirmingClear {
-                confirmClearBar
-            }
-
-            Divider()
-
-            if items.isEmpty {
-                emptyState
+            if let clip = model.editingID.flatMap({ id in store.clips.first { $0.id == id } }) {
+                editor(for: clip)
             } else {
-                list(items)
+                history
             }
-
-            Divider()
-            footer(count: items.count, hasSelection: hasSelection)
         }
         .frame(width: 440, height: 480)
         .onAppear { searchFocused = true }
         .onChange(of: model.focusToken) { searchFocused = true }
+    }
+
+    @ViewBuilder
+    private var history: some View {
+        let items = store.search(model.query)
+        let selected = items.indices.contains(model.selection) ? items[model.selection] : nil
+
+        header(canClear: store.clips.contains { !$0.pinned })
+            .onAppear { searchFocused = true }  // also when coming back from the editor
+
+        if model.confirmingClear {
+            confirmClearBar
+        }
+
+        Divider()
+
+        if items.isEmpty {
+            emptyState
+        } else {
+            list(items)
+        }
+
+        Divider()
+        footer(count: items.count, selected: selected)
     }
 
     // MARK: Header
@@ -101,6 +112,9 @@ struct ClipListView: View {
                             .contextMenu {
                                 Button("Paste") { actions.paste(clip) }
                                 Button(clip.pinned ? "Unpin" : "Pin") { actions.togglePin(clip) }
+                                if !clip.isImage {
+                                    Button("Edit…") { actions.edit(clip) }
+                                }
                                 Divider()
                                 Button("Delete", role: .destructive) { actions.delete(clip) }
                             }
@@ -127,17 +141,59 @@ struct ClipListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: Editor
+
+    private func editor(for clip: Clip) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "pencil")
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Edit clip").font(.system(size: 13, weight: .semibold))
+                    if clip.rtf != nil {
+                        Text("Saving removes its formatting.").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            TextEditor(text: $model.draft)
+                .font(.system(size: 13))
+                .scrollContentBackground(.hidden)
+                .focused($editorFocused)
+                .padding(10)
+
+            Divider()
+
+            HStack(spacing: 6) {
+                ShortcutButton(keys: "⌘↩", label: "Save", action: actions.saveEdit)
+                    .disabled(model.draftIsBlank)
+                ShortcutButton(keys: "esc", label: "Cancel", action: actions.cancelEdit)
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+        }
+        .onAppear { editorFocused = true }
+    }
+
     // MARK: Footer
 
     /// Each hint is also a button that does the same thing as its key.
-    private func footer(count: Int, hasSelection: Bool) -> some View {
+    private func footer(count: Int, selected: Clip?) -> some View {
         HStack(spacing: 6) {
             ShortcutButton(keys: "↩", label: "Paste", action: actions.pasteSelected)
-                .disabled(!hasSelection)
+                .disabled(selected == nil)
             ShortcutButton(keys: "⌘P", label: "Pin", action: actions.pinSelected)
-                .disabled(!hasSelection)
+                .disabled(selected == nil)
+            ShortcutButton(keys: "⌘E", label: "Edit", action: actions.editSelected)
+                .disabled(selected == nil || selected?.isImage == true)
             ShortcutButton(keys: "⌘⌫", label: "Delete", action: actions.deleteSelected)
-                .disabled(!hasSelection)
+                .disabled(selected == nil)
             ShortcutButton(keys: "esc", label: "Close", action: actions.close)
             Spacer()
             Text("\(count) \(count == 1 ? "clip" : "clips")")

@@ -19,6 +19,11 @@ final class PanelModel: ObservableObject {
     @Published var focusToken = 0
     /// True while the "delete all clips?" confirmation bar is showing.
     @Published var confirmingClear = false
+    /// The clip being edited, while the editor is showing, and its edited text.
+    @Published var editingID: UUID?
+    @Published var draft = ""
+
+    var draftIsBlank: Bool { draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }
 
 /// What the history window's buttons do. The keyboard shortcuts call the same functions.
@@ -26,9 +31,13 @@ struct PanelActions {
     var paste: (Clip) -> Void
     var togglePin: (Clip) -> Void
     var delete: (Clip) -> Void
+    var edit: (Clip) -> Void
     var pasteSelected: () -> Void
     var pinSelected: () -> Void
     var deleteSelected: () -> Void
+    var editSelected: () -> Void
+    var saveEdit: () -> Void
+    var cancelEdit: () -> Void
     var close: () -> Void
     var clearHistory: () -> Void
     var openSettings: () -> Void
@@ -83,9 +92,13 @@ final class PanelController: NSObject, NSWindowDelegate {
             paste: { [weak self] clip in self?.paste(clip) },
             togglePin: { [weak self] clip in self?.togglePin(clip) },
             delete: { [weak self] clip in self?.delete(clip) },
+            edit: { [weak self] clip in self?.edit(clip) },
             pasteSelected: { [weak self] in self?.withSelected { self?.paste($0) } },
             pinSelected: { [weak self] in self?.withSelected { self?.togglePin($0) } },
             deleteSelected: { [weak self] in self?.withSelected { self?.delete($0) } },
+            editSelected: { [weak self] in self?.withSelected { self?.edit($0) } },
+            saveEdit: { [weak self] in self?.saveEdit() },
+            cancelEdit: { [weak self] in self?.cancelEdit() },
             close: { [weak self] in self?.hide() },
             clearHistory: { [weak self] in self?.clearHistory() },
             openSettings: { [weak self] in
@@ -122,6 +135,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         model.query = ""
         model.selection = 0
         model.confirmingClear = false
+        model.editingID = nil
         model.focusToken += 1
         if let anchor {
             position(below: anchor)
@@ -189,12 +203,14 @@ final class PanelController: NSObject, NSWindowDelegate {
     private struct KeyPress: Sendable {
         let keyCode: Int
         let command: Bool
+        let shift: Bool
         let characters: String?
         let windowNumber: Int
 
         init(_ event: NSEvent) {
             keyCode = Int(event.keyCode)
             command = event.modifierFlags.contains(.command)
+            shift = event.modifierFlags.contains(.shift)
             characters = event.charactersIgnoringModifiers
             windowNumber = event.windowNumber
         }
@@ -208,6 +224,10 @@ final class PanelController: NSObject, NSWindowDelegate {
     /// Returns true if the key was handled and shouldn't reach the search field.
     private func handle(_ key: KeyPress) -> Bool {
         guard key.windowNumber == panel.windowNumber else { return false }
+        if let id = model.editingID {
+            if store.clips.contains(where: { $0.id == id }) { return handleWhileEditing(key) }
+            model.editingID = nil  // the clip was deleted or trimmed while editing
+        }
         let command = key.command
         let items = store.search(model.query)
         let selected = items.indices.contains(model.selection) ? items[model.selection] : nil
@@ -236,6 +256,9 @@ final class PanelController: NSObject, NSWindowDelegate {
         case kVK_ANSI_P where command:
             if let selected { togglePin(selected) }
             return true
+        case kVK_ANSI_E where command:
+            if let selected { edit(selected) }
+            return true
         default:
             break
         }
@@ -246,6 +269,35 @@ final class PanelController: NSObject, NSWindowDelegate {
             return true
         }
         return false
+    }
+
+    /// In the editor, esc cancels and ⌘↩ saves; every other key goes to the text.
+    private func handleWhileEditing(_ key: KeyPress) -> Bool {
+        switch key.keyCode {
+        case kVK_Escape:
+            cancelEdit()
+            return true
+        case kVK_Return where key.command, kVK_ANSI_KeypadEnter where key.command:
+            saveEdit()
+            return true
+        default:
+            break
+        }
+        // ClipKeep has no Edit menu, so cut, copy, paste, select all and undo
+        // wouldn't reach the text editor on their own.
+        guard key.command, let action = Self.editingAction(for: key) else { return false }
+        return NSApp.sendAction(action, to: nil, from: nil)
+    }
+
+    private static func editingAction(for key: KeyPress) -> Selector? {
+        switch key.characters?.lowercased() {
+        case "x": return #selector(NSText.cut(_:))
+        case "c": return #selector(NSText.copy(_:))
+        case "v": return #selector(NSText.paste(_:))
+        case "a": return #selector(NSText.selectAll(_:))
+        case "z": return key.shift ? Selector(("redo:")) : Selector(("undo:"))
+        default: return nil
+        }
     }
 
     private func moveSelection(by delta: Int, count: Int) {
@@ -286,6 +338,31 @@ final class PanelController: NSObject, NSWindowDelegate {
         store.delete(clip.id)
         let count = store.search(model.query).count
         model.selection = max(0, min(model.selection, count - 1))
+    }
+
+    /// Opens the in-window editor for a text clip. Images can't be edited.
+    private func edit(_ clip: Clip) {
+        guard !clip.isImage else { return }
+        model.confirmingClear = false
+        model.draft = clip.text
+        model.editingID = clip.id
+    }
+
+    private func saveEdit() {
+        guard let id = model.editingID, !model.draftIsBlank else { return }
+        store.updateText(id, to: model.draft)
+        model.editingID = nil
+        // Keep the edited clip selected, in case the new text no longer matches the search.
+        if let index = store.search(model.query).firstIndex(where: { $0.id == id }) {
+            model.selection = index
+        } else {
+            model.query = ""
+            model.selection = store.search("").firstIndex { $0.id == id } ?? 0
+        }
+    }
+
+    private func cancelEdit() {
+        model.editingID = nil
     }
 
     private static func roundedMask(radius: CGFloat) -> NSImage {
