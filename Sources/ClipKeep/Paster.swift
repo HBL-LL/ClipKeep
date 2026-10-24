@@ -14,6 +14,13 @@ enum Paster {
 
     /// Returns false if an image clip's file couldn't be read.
     @discardableResult
+    /// Opens System Settings at Privacy & Security → Accessibility.
+    static func openAccessibilitySettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     static func write(_ clip: Clip, plainText: Bool, imageURL: URL?) -> Bool {
         let item = NSPasteboardItem()
         if clip.isImage {
