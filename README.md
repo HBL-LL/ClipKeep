@@ -89,7 +89,7 @@ Swift and Apple's own frameworks only, with no third-party dependencies.
 | CryptoKit | SHA-256 for matching repeated images and checking update downloads |
 | ServiceManagement | Launch at login (`SMAppService`) |
 | URLSession, GitHub Releases API | Checking for and downloading updates |
-| Bash, `codesign`, `hdiutil`, AppleScript | Building, ad hoc signing, the branded DMG and the install script |
+| Bash, `codesign`, `hdiutil`, AppleScript | Building, code signing, the branded DMG and the install script |
 
 ## Build
 
@@ -102,7 +102,30 @@ open build/ClipKeep.app
 
 This makes `build/ClipKeep.app`, `build/ClipKeep.zip` and `build/ClipKeep.dmg` (Apple Silicon + Intel). `./make-dmg.sh` repackages an existing build as a DMG without rebuilding.
 
-The app is signed ad hoc, so macOS treats every rebuild as a new app: after rebuilding, turn ClipKeep's Accessibility permission off and on again.
+### Signing
+
+`build.sh` signs with a certificate named **ClipKeep Code Signing** when it's in your keychain. macOS then recognises every build as the same app, so permissions like Accessibility survive updates. It's a free self-signed, code-signing-only certificate; to make one:
+
+```bash
+cat > req.cnf <<'EOF'
+[req]
+distinguished_name = dn
+x509_extensions = ext
+prompt = no
+[dn]
+CN = ClipKeep Code Signing
+[ext]
+basicConstraints = critical, CA:false
+keyUsage = critical, digitalSignature
+extendedKeyUsage = critical, codeSigning
+EOF
+openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 3650 -config req.cnf
+openssl pkcs12 -export -inkey key.pem -in cert.pem -name "ClipKeep Code Signing" -out id.p12 -passout pass:temp
+security import id.p12 -k ~/Library/Keychains/login.keychain-db -P temp -T /usr/bin/codesign
+rm -P key.pem id.p12
+```
+
+Without it, `build.sh` signs ad hoc and macOS treats every build as a new app, so Accessibility has to be re-granted after each update. This isn't an Apple Developer ID: downloaded copies still need the one-time **Open Anyway** step.
 
 ## License
 

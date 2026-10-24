@@ -18,7 +18,17 @@ cp Resources/Info.plist "$app/Contents/Info.plist"
 cp Resources/AppIcon.icns Resources/menubarTemplate.png Resources/menubarTemplate@2x.png "$app/Contents/Resources/"
 
 # Ad-hoc signature so macOS can track its permissions (Accessibility, login item).
-codesign --force --sign - "$app"
+# Sign with the "ClipKeep Code Signing" certificate when this Mac has it: macOS then
+# recognises every build as the same app, so permissions like Accessibility survive
+# updates. Without it, fall back to ad hoc signing (permissions reset each update).
+identity="${CLIPKEEP_SIGN_IDENTITY:-ClipKeep Code Signing}"
+if security find-certificate -c "$identity" >/dev/null 2>&1; then
+    codesign --force --sign "$identity" "$app"
+    echo "Signed with \"$identity\""
+else
+    codesign --force --sign - "$app"
+    echo "Warning: \"$identity\" not found; signed ad hoc (Accessibility must be re-granted after each update)." >&2
+fi
 
 # Zip for GitHub releases; the in-app updater downloads this file.
 ditto -c -k --keepParent "$app" build/ClipKeep.zip
