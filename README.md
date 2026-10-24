@@ -59,7 +59,7 @@ ClipKeep has to be somewhere it can replace itself, such as your Applications fo
   - **Privacy:** skipping passwords and apps to ignore.
   - **Updates:** automatic checks, Check for Updates, and a link to the release notes.
 
-To paste for you, ClipKeep needs **Accessibility** access (System Settings → Privacy & Security → Accessibility). Without it, the clip is copied and you press ⌘V yourself.
+To paste for you, ClipKeep needs **Accessibility** access (System Settings → Privacy & Security → Accessibility). Without it, the clip is copied and you press ⌘V yourself. ClipKeep never pops up macOS's permission dialog on its own: the history window shows a small note instead, and the dialog only appears when you click **Allow…** there (or **Grant Access…** in Settings → Pasting). Allowing it also replaces any outdated ClipKeep entry left over from an older version.
 
 ## How it works
 

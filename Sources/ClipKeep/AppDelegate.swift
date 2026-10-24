@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         panel = PanelController(
             store: store,
+            settings: settings,
             onPaste: { [weak self] clip in self?.paste(clip) },
             onOpenSettings: { [weak self] in self?.openSettings() })
 
@@ -70,12 +71,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         monitor.skipCurrentContents()
         store.markUsed(clip.id)
 
-        guard settings.pasteDirectly else { return }
-        guard Paster.hasAccessibility else {
-            // The clip is on the clipboard; the user can press ⌘V themselves.
-            Paster.requestAccessibility()
-            return
-        }
+        // Without access the clip is still on the clipboard and the user presses ⌘V.
+        // The history window explains this instead of a system prompt on every paste.
+        guard settings.pasteDirectly, Paster.hasAccessibility else { return }
         // Give the panel a moment to close so ⌘V reaches the app underneath.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
             Paster.sendCommandV()

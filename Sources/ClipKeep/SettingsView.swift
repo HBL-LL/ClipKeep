@@ -176,7 +176,7 @@ struct PastingSettingsView: View {
                         Button("Open Settings") { Paster.openAccessibilitySettings() }
                     } label: {
                         Text("Already switched on?")
-                        Text("After an update, macOS can keep ClipKeep's old entry. In Accessibility, select ClipKeep, click −, then click Grant Access again.")
+                        Text("After an update, macOS can keep ClipKeep's old entry. Click Grant Access: it replaces the old entry, then switch ClipKeep on.")
                     }
                 }
             } header: {

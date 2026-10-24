@@ -22,6 +22,8 @@ final class PanelModel: ObservableObject {
     /// The clip being edited, while the editor is showing, and its edited text.
     @Published var editingID: UUID?
     @Published var draft = ""
+    /// Set while automatic pasting is on but ClipKeep isn't allowed to press ⌘V.
+    @Published var accessNotice: Paster.AccessibilityStatus?
 
     var draftIsBlank: Bool { draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 }
@@ -41,12 +43,17 @@ struct PanelActions {
     var close: () -> Void
     var clearHistory: () -> Void
     var openSettings: () -> Void
+    var allowAccessibility: () -> Void
+    var dismissAccessNotice: () -> Void
 }
 
 @MainActor
 final class PanelController: NSObject, NSWindowDelegate {
     private let store: ClipStore
+    private let settings: Settings
     private let model = PanelModel()
+    /// "Not Now" on the Accessibility notice hides it until ClipKeep is next opened.
+    private var accessNoticeDismissed = false
     private let onPaste: (Clip) -> Void
     private let onOpenSettings: () -> Void
     private var panel: ClipPanel!
@@ -58,8 +65,10 @@ final class PanelController: NSObject, NSWindowDelegate {
     /// Called with true when the panel opens and false when it closes.
     var onVisibilityChange: ((Bool) -> Void)?
 
-    init(store: ClipStore, onPaste: @escaping (Clip) -> Void, onOpenSettings: @escaping () -> Void) {
+    init(store: ClipStore, settings: Settings,
+         onPaste: @escaping (Clip) -> Void, onOpenSettings: @escaping () -> Void) {
         self.store = store
+        self.settings = settings
         self.onPaste = onPaste
         self.onOpenSettings = onOpenSettings
         super.init()
@@ -104,6 +113,14 @@ final class PanelController: NSObject, NSWindowDelegate {
             openSettings: { [weak self] in
                 self?.hide()
                 self?.onOpenSettings()
+            },
+            allowAccessibility: { [weak self] in
+                self?.hide()
+                Paster.requestAccessibility()
+            },
+            dismissAccessNotice: { [weak self] in
+                self?.accessNoticeDismissed = true
+                self?.model.accessNotice = nil
             })
         let list = ClipListView(store: store, model: model, actions: actions)
         let host = NSHostingView(rootView: list)
@@ -136,6 +153,8 @@ final class PanelController: NSObject, NSWindowDelegate {
         model.selection = 0
         model.confirmingClear = false
         model.editingID = nil
+        let access = Paster.accessibilityStatus()
+        model.accessNotice = settings.pasteDirectly && access != .allowed && !accessNoticeDismissed ? access : nil
         model.focusToken += 1
         if let anchor {
             position(below: anchor)

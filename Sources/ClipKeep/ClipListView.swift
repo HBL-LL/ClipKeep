@@ -32,6 +32,8 @@ struct ClipListView: View {
 
         if model.confirmingClear {
             confirmClearBar
+        } else if let notice = model.accessNotice {
+            accessBar(notice)
         }
 
         Divider()
@@ -94,6 +96,33 @@ struct ClipListView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(Color.red.opacity(0.10))
+    }
+
+    /// Explains why choosing a clip only copies it. Used instead of macOS's permission
+    /// prompt, which only appears when the user clicks Allow.
+    private func accessBar(_ notice: Paster.AccessibilityStatus) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "hand.raised.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(notice == .lost ? "ClipKeep can't paste for you anymore" : "Choosing a clip copies it")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(notice == .lost
+                     ? "macOS reset its permission, usually after an update. Press ⌘V, or allow it again."
+                     : "Press ⌘V to paste, or allow ClipKeep to paste for you.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Button("Not Now", action: actions.dismissAccessNotice)
+                .controlSize(.small)
+            Button("Allow…", action: actions.allowAccessibility)
+                .controlSize(.small)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Color.orange.opacity(0.10))
     }
 
     // MARK: List
